@@ -1,7 +1,7 @@
 
    (function (window) {
     "use strict";
-    var params = ["fbclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
+    var params = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
     
   
     function getCookie(name) {
