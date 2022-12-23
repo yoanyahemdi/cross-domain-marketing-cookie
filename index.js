@@ -1,13 +1,37 @@
 (function () {
-
+  
     var cookieName = "_te";
-    var cookieTime = 1; // days
-    var paramsCookie = ["gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
+    var cookieTime = 30; // days
+    var paramsCookie = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
 
+    function getCookie(name) {
+      // Split cookie string and get all individual name=value pairs in an array
+      var cookieArr = document.cookie.split(";");
+      
+      // Loop through the array elements
+      for(var i = 0; i < cookieArr.length; i++) {
+          var cookiePair = cookieArr[i].split("=");
+          
+          /* Removing whitespace at the beginning of the cookie name
+          and compare it with the given string */
+          if(name == cookiePair[0].trim()) {
+              // Decode the cookie value and return
+              return decodeURIComponent(cookiePair[1]);
+          }
+      }
+      
+      // Return null if not found
+      return null;
+  }
 
+  if (paramsCookie.some(param => window.location.search.includes(param))) {
+ 
     function getClientID2() {
+      try {
         return ga.getAll()[0].get('clientId');
+      } catch(e) {}
     }
+
 
     function getClientID1() {
         try {
@@ -38,25 +62,6 @@
         }
     }
 
-    function getCookie(name) {
-        // Split cookie string and get all individual name=value pairs in an array
-        var cookieArr = document.cookie.split(";");
-        
-        // Loop through the array elements
-        for(var i = 0; i < cookieArr.length; i++) {
-            var cookiePair = cookieArr[i].split("=");
-            
-            /* Removing whitespace at the beginning of the cookie name
-            and compare it with the given string */
-            if(name == cookiePair[0].trim()) {
-                // Decode the cookie value and return
-                return decodeURIComponent(cookiePair[1]);
-            }
-        }
-        
-        // Return null if not found
-        return null;
-    }
 
     function setCookie(name, value, days) {
         var expires = "";
@@ -67,8 +72,6 @@
         }
         document.cookie = name + "=" + (value || "") + "; SameSite=None; Secure; expires=" +expires + "; path=/; domain=" + get_top_domain();
     }
-
- 
 
     function getTimestampMillis() {
         return Date.now();
@@ -109,7 +112,6 @@
         }
     }
 
-
     if (!fbp) {
         fbp =
           'fb.' +
@@ -119,12 +121,24 @@
           '.' +
           generateRandom(1000000000, 2147483647);
     }
-    
-    var attributes = {
-        referrer: document.referrer.length ? document.referrer : "direct",
-        ga_client_id: getClientID1(),
-        fbc: fbc,
-        fbp: fbp,
+
+
+    var attributes = {};
+    if (getCookie(cookieName) !== null) {
+        attributes = JSON.parse(getCookie(cookieName));
+        Object.assign(attributes, {
+          referrer: document.referrer.length ? document.referrer : "direct",
+          ga_client_id: getClientID1(),
+          fbc: fbc,
+          fbp: fbp, 
+      });
+      } else {
+       attributes = {
+          referrer: document.referrer.length ? document.referrer : "direct",
+          ga_client_id: getClientID1(),
+          fbc: fbc,
+          fbp: fbp,
+      }
     }
 
     for (var i = 0; i < paramsCookie.length; i++) {
@@ -137,6 +151,8 @@
 
     attributes = JSON.stringify(attributes);
 
+
     return setCookie(cookieName, attributes, cookieTime);
 
+  }
 })();
