@@ -68,6 +68,7 @@
           screen_width: window.screen.width,
           fbp: this.getTe().fbp,
           fbc: this.getTe().fbc,
+          gclid: this.getTe().gclid,
           ga_client_id: this.getTe().ga_client_id,
           te_campaign: this.getTe().utm_campaign,
           te_source: this.getTe().utm_source,
