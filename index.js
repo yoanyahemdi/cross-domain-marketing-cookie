@@ -4,27 +4,21 @@
     var cookieTime = 30; // days
     var paramsCookie = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
 
-    var getCookie = function(name) {
-      // Split cookie string and get all individual name=value pairs in an array
-      var cookieArr = document.cookie.split(";");
-      
-      // Loop through the array elements
-      for(var i = 0; i < cookieArr.length; i++) {
-          var cookiePair = cookieArr[i].split("=");
-          
-          /* Removing whitespace at the beginning of the cookie name
-          and compare it with the given string */
-          if(name == cookiePair[0].trim()) {
-              // Decode the cookie value and return
-              return decodeURIComponent(cookiePair[1]);
-          }
+    var getCookie = function (name) {
+      var value = `; ${document.cookie}`;
+      var parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+      } else {
+        return null;
       }
-      
-      // Return null if not found
-      return null;
-  }
+    }
+    
 
-  if (paramsCookie.some(function(param) { return window.location.search.includes(param); })) {
+  var fbp = getCookie('_fbp');
+  var fbc = getCookie('_fbc');
+
+  if (paramsCookie.some(function(param) { return window.location.search.includes(param); }) || fbp || fbc) {
  
    var getClientID2 = function() {
       try {
@@ -84,8 +78,6 @@
     }
 
     var url = document.location.href;
-    var fbc = getCookie('_fbc');
-    var fbp = getCookie('_fbp');
     var urlParsed = (new URL(document.location));
     var subDomainIndex;
     if (url) {
