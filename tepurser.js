@@ -72,7 +72,7 @@
           ga_client_id: this.getTe().ga_client_id,
           te_campaign: this.getTe().utm_campaign,
           te_source: this.getTe().utm_source,
-          te_meidum: this.getTe().utm_medium,
+          te_medium: this.getTe().utm_medium,
         };
         for (var i = 0; i < params.length; i++) {
           var param = params[i];
