@@ -4,7 +4,7 @@
     var params = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
     
   
-    function getCookie(name) {
+    var getCookie2 = function(name) {
       var nameEQ = name + "=";
       var ca = document.cookie.split(';');
       for(var i=0;i < ca.length;i++) {
@@ -16,7 +16,7 @@
     }
   
     var tagexpert = window.tagexpert || window.tagexpert || {
-      getCookie:  function(name) {
+      getCookie2:  function(name) {
         var nameEQ = name + "=";
         var ca = document.cookie.split(';');
         for(var i=0;i < ca.length;i++) {
@@ -27,7 +27,7 @@
         return null;
       },
       getTe: function(){
-        var _te = getCookie('_te');
+        var _te = getCookie2('_te');
         _te = JSON.parse(_te);
         var newte = _te || '';
         return newte;

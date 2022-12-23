@@ -4,7 +4,7 @@
     var cookieTime = 30; // days
     var paramsCookie = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
 
-    function getCookie(name) {
+    var getCookie = function(name) {
       // Split cookie string and get all individual name=value pairs in an array
       var cookieArr = document.cookie.split(";");
       
@@ -24,16 +24,16 @@
       return null;
   }
 
-  if (paramsCookie.some(param => window.location.search.includes(param))) {
+  if (paramsCookie.some(function(param) { return window.location.search.includes(param); })) {
  
-    function getClientID2() {
+   var getClientID2 = function() {
       try {
         return ga.getAll()[0].get('clientId');
       } catch(e) {}
     }
 
 
-    function getClientID1() {
+    var getClientID1 = function() {
         try {
           var trackers = ga.getAll();
           var i, len;
@@ -47,7 +47,7 @@
     }
 
 
-    function get_top_domain(){
+    var get_top_domain = function(){
         var i,h,
           weird_cookie='weird_get_top_level_domain=cookie',
           hostname = document.location.hostname.split('.');
@@ -63,7 +63,7 @@
     }
 
 
-    function setCookie(name, value, days) {
+    var setCookie = function(name, value, days) {
         var expires = "";
         if (days) {
           var date = new Date();
@@ -73,11 +73,11 @@
         document.cookie = name + "=" + (value || "") + "; SameSite=None; Secure; expires=" +expires + "; path=/; domain=" + get_top_domain();
     }
 
-    function getTimestampMillis() {
+   var getTimestampMillis = function() {
         return Date.now();
     }
 
-    function generateRandom(min, max) {
+   var generateRandom = function(min, max) {
         min = Math.ceil(min);
         max = Math.floor(max);
         return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -130,7 +130,7 @@
           referrer: document.referrer.length ? document.referrer : "direct",
           ga_client_id: getClientID1(),
           fbc: fbc,
-          fbp: fbp, 
+          fbp: fbp,
       });
       } else {
        attributes = {
