@@ -4,15 +4,17 @@
     var cookieTime = 30; // days
     var paramsCookie = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
 
-    var getCookie = function (name) {
-      var value = `; ${document.cookie}`;
-      var parts = value.split(`; ${name}=`);
+    var getCookie = function(name) {
+      const value = "; " + document.cookie;
+      const parts = value.split("; " + name + "=");
       if (parts.length === 2) {
-        return parts.pop().split(';').shift();
+        return parts.pop().split(";").shift();
       } else {
         return null;
       }
     }
+    
+
     
 
   var fbp = getCookie('_fbp');
