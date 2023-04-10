@@ -1,4 +1,6 @@
 
+   // This code is an adaptation to the SOURCE CODE: https://github.com/bilbof/purser
+   
    (function (window) {
     "use strict";
     var params = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
