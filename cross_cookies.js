@@ -7,7 +7,7 @@
     function getCookie(name) {
         var value = "; " + document.cookie;
         var parts = value.split("; " + name + "=");
-        return parts.length === 2 ? parts.pop().split(";").shift() : null;
+        return parts.length > 1 ? parts.pop().split(";").shift() : null;
     }
 
     function getGaClientIdFromCookie() {
@@ -22,7 +22,6 @@
     function generateGaClientId() {
         return Date.now() + '.' + generateRandom(1000000000, 2147483647);
     }
-
 
     function get_top_domain() {
         var i, h, hostname = document.location.hostname.split('.'),
@@ -49,9 +48,27 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    var fbp = getCookie('_fbp');
-    var fbc = getCookie('_fbc');
+    function getTimestampMillis() {
+        return Date.now();
+    }
+
+    function generateUUID() {
+        var d = new Date().getTime();
+        if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+            d += performance.now(); // use high-precision timer if available
+        }
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = (d + Math.random() * 16) % 16 | 0;
+            d = Math.floor(d / 16);
+            return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+        return uuid;
+    }
+
     var urlParsed = new URL(document.location);
+
+    var subDomainIndex = get_top_domain().split('.').length - 1;
+
     function getFbcFromUrl() {
         if (urlParsed.searchParams.get('fbclid')) {
             return 'fb.' + subDomainIndex + '.' + getTimestampMillis() + '.' + decodeURIComponent(urlParsed.searchParams.get('fbclid'));
@@ -60,7 +77,7 @@
     }
 
     function generateFbc() {
-        return 'fb.' + subDomainIndex + '.' + getTimestampMillis() + '.' + generateRandom(1000000000, 2147483647);
+        return null
     }
 
     function generateFbp() {
@@ -69,11 +86,8 @@
 
     var fbc = getFbcFromUrl() || getCookie('_fbc') || generateFbc();
     var fbp = getCookie('_fbp') || generateFbp();
-
-    var subDomainIndex = get_top_domain().split('.').length - 1;
     var gaClientId = getGaClientIdFromCookie();
     var isNewGaClientId = false;
-    var eventID = generateRandom(1000000000, 2147483647);
 
     if (!gaClientId) {
         gaClientId = generateGaClientId();
@@ -86,7 +100,9 @@
         fbp: fbp,
         ga_client_id: gaClientId,
         is_new_ga_client_id: isNewGaClientId,
-        event_id: eventID
+        event_id_sign_up: generateUUID(),
+        event_id_complete_registration: generateUUID(),
+        event_id_purchase: generateUUID()
     };
 
     var existingCookie = getCookie(cookieName);
@@ -108,7 +124,9 @@
 
     if (paramsCookie.some(function (param) { return window.location.search.includes(param); })) {
         return setCookie(cookieName, attributes, cookieTime);
-    } else if (document.referrer.indexOf('adcreative.ai') == -1) {
+    } else if (document.referrer.indexOf(get_top_domain()) == -1) {
+        return setCookie(cookieName, attributes, cookieTime);
+    } else if (getCookie(cookieName) !== null) {
         return setCookie(cookieName, attributes, cookieTime);
     } else if (getCookie(cookieName) == null || getCookie(cookieName) == undefined) {
         return setCookie(cookieName, attributes, cookieTime);
