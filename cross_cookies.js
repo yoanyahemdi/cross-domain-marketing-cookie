@@ -2,13 +2,41 @@
 
     var cookieName = "_te";
     var cookieTime = 30; // days
-    var paramsCookie = ["fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
+    var measurement_id = "G-JQTQ82MB3Y";
+
+    var axeptioConsentIdentifiers = {
+        advertising: ['c:google', 'c:criteo'],
+        statistics: ['c:googleana-4TXnJigR']
+    }
+    var didomiConsentIdentifiers = {
+        advertising: ['c:google', 'c:criteo'],
+        statistics: ['c:googleana-4TXnJigR']
+    };
+    var oneTrustConsentIdentifiers = {
+        advertising: 'C0004',
+        statistics: 'C0002'
+    };
+    var paramsCookie = ["nl_source", "nl_medium", "nl_campaign", "fbclid", "gclid", "utm_source", "utm_medium", "utm_name", "utm_term", "utm_campaign", "utm_content"];
 
     function getCookie(name) {
         var value = "; " + document.cookie;
         var parts = value.split("; " + name + "=");
         return parts.length > 1 ? parts.pop().split(";").shift() : null;
     }
+
+
+    function getPartFromCookie(measurement_id) {
+        var cookieName = "_ga_" + measurement_id.substring(2); // Skip first two characters (i.e., "G-")
+        var cookieValue = getCookie(cookieName);
+        if (cookieValue !== null) {
+            var parts = cookieValue.split(".");
+            if (parts.length > 2) {
+                return parts[2];
+            }
+        }
+        return null;
+    }
+
 
     function getGaClientIdFromCookie() {
         var gaCookie = getCookie('_ga');
@@ -94,10 +122,110 @@
         isNewGaClientId = true;
     }
 
+    function hasConsented(category) {
+        var dataLayer = window.dataLayer || [];
+
+        // Ensure the category is valid for Didomi and OneTrust
+        if (!didomiConsentIdentifiers[category] || !oneTrustConsentIdentifiers[category]) {
+            console.error('Invalid consent category: ' + category);
+            return false;
+        }
+
+        // Check Didomi consent
+        var didomiConsentEntry = dataLayer.find(function (entry) {
+            return entry.didomiVendorsConsent;
+        });
+        if (didomiConsentEntry) {
+            var hasDidomiConsent = didomiConsentIdentifiers[category].some(function (id) {
+                return didomiConsentEntry.didomiVendorsConsent.includes(id);
+            });
+            if (hasDidomiConsent) {
+                return true;
+            }
+        }
+
+        // Check OneTrust consent
+        var oneTrustConsentEntry = dataLayer.find(function (entry) {
+            return entry.OnetrustActiveGroups;
+        });
+        if (oneTrustConsentEntry && oneTrustConsentEntry.OnetrustActiveGroups.includes(oneTrustConsentIdentifiers[category])) {
+            return true;
+        }
+
+
+        // Default to no consent if neither consent entry is found
+        return false;
+    }
+
+
+    function getGaClientId() {
+        var realGaClientId = getGaClientIdFromCookie();
+        if (!realGaClientId) {
+            // If real GA Client ID isn't available, use the generated one
+            return generateGaClientId();
+        }
+        return realGaClientId;
+    }
+
+    function getSessionId() {
+        var partFromCookie = getPartFromCookie(measurement_id);
+        if (partFromCookie !== null) {
+            return parseInt(partFromCookie);
+        }
+        return null; // Or handle as needed
+    }
+
+    function sanitizeCookieValue(cookieValue) {
+        // Check if cookieValue is null or undefined
+        if (cookieValue === null || cookieValue === undefined) {
+            // Return a safe default, like an empty object, if the value is null or undefined
+            return '{}';
+        }
+
+        // Implement remaining sanitization logic here
+        // For example, checking if it's a valid JSON string
+        if (cookieValue.charAt(0) === '{' && cookieValue.charAt(cookieValue.length - 1) === '}') {
+            return cookieValue;
+        } else {
+            // Return a safe default if the cookie value doesn't look like a JSON object
+            return '{}';
+        }
+    }
+
+
+    function getDefaultAttributes() {
+        // Return a default attributes object
+        return {
+            referrer: "direct"
+        };
+    }
+
+    function updateGaClientIdAndSessionId() {
+        // Reattempt to fetch the real GA Client ID if the current one was generated
+        if (attributes.is_new_ga_client_id) {
+            var realGaClientId = getGaClientIdFromCookie();
+            if (realGaClientId) {
+                attributes.ga_client_id = realGaClientId;
+                attributes.is_new_ga_client_id = false; // Update the flag
+            }
+        }
+
+        // Reattempt to fetch Session ID if it's not properly set
+        var session_id = getSessionId();
+        if (session_id !== null) {
+            attributes.session_id = session_id;
+        }
+    }
+
+    var gaClientId = getGaClientId(); // Always attempt to fetch the real GA client ID
+    var session_id = getSessionId(); // Always attempt to fetch the session ID
+
+
     var attributes = {
         referrer: document.referrer.length ? document.referrer : "direct",
         fbc: fbc,
         fbp: fbp,
+        session_id: session_id,
         ga_client_id: gaClientId,
         is_new_ga_client_id: isNewGaClientId,
         event_id_sign_up: generateUUID(),
@@ -105,31 +233,91 @@
         event_id_purchase: generateUUID()
     };
 
+
     var existingCookie = getCookie(cookieName);
     if (existingCookie !== null) {
-        var existingAttributes = JSON.parse(existingCookie);
-        Object.assign(attributes, existingAttributes);
+        var safeCookieValue = sanitizeCookieValue(existingCookie);
+        try {
+            var existingAttributes = JSON.parse(safeCookieValue);
+            Object.assign(attributes, existingAttributes);
+        } catch (e) {
+            // Set existingAttributes to a default value if JSON parsing fails
+            existingAttributes = getDefaultAttributes();
+            // Optionally, reset the cookie to a default state
+            // setCookie(cookieName, JSON.stringify(existingAttributes), cookieTime);
+        }
     }
 
-    for (var i = 0; i < paramsCookie.length; i++) {
-        var param = paramsCookie[i];
-        param = param.replace(/[\[\]]/g, "\\$&");
+
+    // Identify new URL parameters
+    var currentURLParams = {};
+    var foundParamsInURL = false;
+
+    paramsCookie.forEach(function (param) {
+        // Validate that each param is a safe, expected value
+        if (!/^[a-zA-Z0-9_]+$/.test(param)) {
+            console.error('Invalid parameter in paramsCookie');
+            return; // Skip this iteration
+        }
+
+        // Ensure the input size is reasonable
+        if (param.length > 100) {
+            console.error('Parameter too long in paramsCookie');
+            return; // Skip this iteration
+        }
+
         var regex = new RegExp("[?&]" + param + "(=([^&#]*)|&|#|$)");
         var results = regex.exec(urlParsed.href);
-        if (results && results[2]) attributes[param] = decodeURIComponent(results[2].replace(/\+/g, " "));
+        if (results && results[2]) {
+            currentURLParams[param] = decodeURIComponent(results[2].replace(/\+/g, " "));
+            foundParamsInURL = true;
+        }
+    });
+
+    // If any paramsCookie is found in the URL, merge new URL parameters with existing attributes and delete old ones not present in current URL
+    if (foundParamsInURL) {
+        paramsCookie.forEach(function (param) {
+            if (currentURLParams.hasOwnProperty(param)) {
+                attributes[param] = currentURLParams[param]; // Update or add new parameter
+            } else {
+                delete attributes[param]; // Remove parameter not present in current URL
+            }
+        });
     }
 
-    attributes = JSON.stringify(attributes);
 
-
-    if (paramsCookie.some(function (param) { return window.location.search.includes(param); })) {
-        return setCookie(cookieName, attributes, cookieTime);
-    } else if (document.referrer.indexOf(get_top_domain()) == -1) {
-        return setCookie(cookieName, attributes, cookieTime);
-    } else if (getCookie(cookieName) !== null) {
-        return setCookie(cookieName, attributes, cookieTime);
-    } else if (getCookie(cookieName) == null || getCookie(cookieName) == undefined) {
-        return setCookie(cookieName, attributes, cookieTime);
+    if (getCookie(cookieName) !== null) {
+        updateGaClientIdAndSessionId();
     }
+
+    // Check for Google Analytics consent
+    if (!hasConsented('statistics')) {
+        // User has opted out
+        attributes = { optOut: "opt-out" }; // Reset attributes and add only the opt-out attribute
+    } else {
+        attributes.optOut = "opt-in"; // Add an opt-in attribute
+    }
+
+    // Convert attributes to a JSON string
+    var attributesString = JSON.stringify(attributes);
+
+    if (paramsCookie.some(function (param) {
+        return window.location.search.includes(param);
+    }) || document.referrer.indexOf(get_top_domain()) == -1 || getCookie(cookieName) == null) {
+        // No relevant URL parameters, referrer is the same domain, and cookie already exists
+        setCookie(cookieName, attributesString, cookieTime);
+    }
+
+
+    if (getCookie(cookieName) !== null) {
+        if (sanitizeCookieValue(existingCookie).indexOf('optOut') == -1) {
+            setCookie(cookieName, attributesString, cookieTime);
+        } else if (sanitizeCookieValue(existingCookie).indexOf('opt-int') == -1) {
+            setCookie(cookieName, attributesString, cookieTime);
+        }
+    }
+
+    return;
+
 
 })();
